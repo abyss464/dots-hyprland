@@ -1,6 +1,8 @@
 pragma ComponentBehavior: Bound
 import qs
 import qs.modules.common
+import qs.modules.common.utils
+import qs.modules.common.functions
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -15,7 +17,71 @@ Scope {
 
     property var action: RegionSelection.SnipAction.Copy
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
-    
+
+    // ===== Cross-screen support =====
+    // Whole-layout frozen capture, used when a selection spans multiple monitors.
+    // Coordinate model (verified): pixel = (logical - layoutOrigin) * captureScale
+    readonly property var allMonitors: Quickshell.screens.map(s => Hyprland.monitorFor(s))
+    readonly property real layoutOriginX: allMonitors.length ? Math.min(...allMonitors.map(m => m.x)) : 0
+    readonly property real layoutOriginY: allMonitors.length ? Math.min(...allMonitors.map(m => m.y)) : 0
+    readonly property real captureScale: allMonitors.length ? Math.max(...allMonitors.map(m => m.scale)) : 1
+    // Dim-overlay border must be big enough to cover any monitor even when the
+    // selection sits on a different one (the overlay is a hole-punching border).
+    readonly property real overlayExtent: {
+        let span = 0;
+        for (const m of allMonitors) {
+            span = Math.max(span, Math.abs(m.x) + m.width, Math.abs(m.y) + m.height);
+        }
+        return span * 2 + 1000;
+    }
+    property string fullLayoutPath: `${Directories.screenshotTemp}/image-fullLayout`
+    property bool fullLayoutReady: false
+
+    // Live (global, logical) selection rectangle, so every monitor can draw its
+    // portion of a selection that crosses screen boundaries.
+    property bool liveActive: false
+    property real liveGX: 0
+    property real liveGY: 0
+    property real liveGW: 0
+    property real liveGH: 0
+
+    Process {
+        id: fullLayoutProc
+        command: ["bash", "-c", `mkdir -p '${StringUtils.shellSingleQuoteEscape(Directories.screenshotTemp)}' && grim '${StringUtils.shellSingleQuoteEscape(root.fullLayoutPath)}'`]
+        onExited: root.fullLayoutReady = true
+    }
+    Connections {
+        target: GlobalStates
+        function onRegionSelectorOpenChanged() {
+            if (GlobalStates.regionSelectorOpen) {
+                root.fullLayoutReady = false;
+                root.liveActive = false;
+                fullLayoutProc.running = true;
+            }
+        }
+    }
+
+    function crossScreenAction(snipAction) {
+        switch (snipAction) {
+            case RegionSelection.SnipAction.Copy: return ScreenshotAction.Action.Copy;
+            case RegionSelection.SnipAction.Edit: return ScreenshotAction.Action.Edit;
+            case RegionSelection.SnipAction.Search: return ScreenshotAction.Action.Search;
+            case RegionSelection.SnipAction.CharRecognition: return ScreenshotAction.Action.CharRecognition;
+            default: return ScreenshotAction.Action.Copy;
+        }
+    }
+    // gx, gy, gw, gh are in global logical coordinates
+    function commitCrossScreen(gx, gy, gw, gh, snipAction) {
+        if (gw <= 0 || gh <= 0) return;
+        const sx = (gx - root.layoutOriginX) * root.captureScale;
+        const sy = (gy - root.layoutOriginY) * root.captureScale;
+        const sw = gw * root.captureScale;
+        const sh = gh * root.captureScale;
+        const saveDir = Config.options.screenSnip.savePath !== "" ? Config.options.screenSnip.savePath : "";
+        const command = ScreenshotAction.getCommand(sx, sy, sw, sh, root.fullLayoutPath, root.crossScreenAction(snipAction), saveDir);
+        Quickshell.execDetached(command);
+    }
+
     Variants {
         model: Quickshell.screens
         delegate: Loader {
@@ -25,6 +91,7 @@ Scope {
 
             sourceComponent: RegionSelection {
                 screen: regionSelectorLoader.modelData
+                selector: root
                 onDismiss: root.dismiss()
                 action: root.action
                 selectionMode: root.selectionMode

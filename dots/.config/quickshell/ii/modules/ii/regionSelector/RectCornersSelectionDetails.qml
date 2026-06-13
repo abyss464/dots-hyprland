@@ -12,6 +12,9 @@ Item {
     required property real mouseY
     required property color color
     required property color overlayColor
+    // How far the dim overlay extends from the selection hole. Defaults to this
+    // item's size (single-screen); set larger to cover other monitors.
+    property real overlayExtent: Math.max(width, height)
     property bool showAimLines: Config.options.regionSelector.rect.showAimLines
 
     property bool breathingBorderOnly: false
@@ -32,7 +35,7 @@ Item {
         height: root.regionHeight + darkenOverlay.border.width * 2
         color: "transparent"
         border.color: root.overlayColor
-        border.width: Math.max(root.width, root.height)
+        border.width: root.overlayExtent
     }
 
     DashedBorder {

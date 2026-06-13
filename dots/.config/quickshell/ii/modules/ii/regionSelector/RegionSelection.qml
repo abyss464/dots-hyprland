@@ -35,6 +35,7 @@ PanelWindow {
     property var action: RegionSelection.SnipAction.Copy
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
     property var phase: RegionSelection.Phase.Select
+    property var selector // RegionSelector root (shared cross-screen state)
     signal dismiss()
 
     // Styles
@@ -184,6 +185,14 @@ PanelWindow {
     property real regionX: Math.min(dragStartX, draggingX)
     property real regionY: Math.min(dragStartY, draggingY)
 
+    // What this monitor draws. When a selection spans monitors, non-dragging
+    // screens render their slice from the shared global live rectangle.
+    readonly property bool useLiveRegion: (root.selector?.liveActive ?? false) && !root.dragging
+    readonly property real drawRegionX: useLiveRegion ? (root.selector.liveGX - root.monitorOffsetX) : root.regionX
+    readonly property real drawRegionY: useLiveRegion ? (root.selector.liveGY - root.monitorOffsetY) : root.regionY
+    readonly property real drawRegionWidth: useLiveRegion ? root.selector.liveGW : root.regionWidth
+    readonly property real drawRegionHeight: useLiveRegion ? root.selector.liveGH : root.regionHeight
+
     // Screenshot stuff
     TempScreenshotProcess {
         id: screenshotProc
@@ -215,7 +224,17 @@ PanelWindow {
             root.dismiss();
             return;
         }
-        root.visible = true;
+        // Also wait for the whole-layout capture so cross-screen snips are valid
+        root.visible = (root.selector?.fullLayoutReady ?? true);
+    }
+    Connections {
+        target: root.selector
+        function onFullLayoutReadyChanged() {
+            if ((root.selector?.fullLayoutReady ?? false) && root.preparationDone
+                && !(root.isRecording && root.recordingShouldStop)) {
+                root.visible = true;
+            }
+        }
     }
 
     Process {
@@ -263,6 +282,30 @@ PanelWindow {
         if (root.regionWidth <= 0 || root.regionHeight <= 0) {
             console.warn("[Region Selector] Invalid region size, skipping snip.");
             root.dismiss();
+        }
+
+        // Cross-screen: selection extends beyond this monitor -> use the whole-layout
+        // capture with global coordinates. Recording stays single-screen.
+        const isRecord = root.action === RegionSelection.SnipAction.Record
+            || root.action === RegionSelection.SnipAction.RecordWithSound;
+        const eps = 1;
+        const spansScreens = (root.regionX < -eps) || (root.regionY < -eps)
+            || (root.regionX + root.regionWidth > root.screen.width + eps)
+            || (root.regionY + root.regionHeight > root.screen.height + eps);
+        if (spansScreens && !isRecord && root.selector) {
+            let act = root.action;
+            if (act === RegionSelection.SnipAction.Copy || act === RegionSelection.SnipAction.Edit) {
+                act = root.mouseButton === Qt.RightButton ? RegionSelection.SnipAction.Edit : RegionSelection.SnipAction.Copy;
+            }
+            root.selector.commitCrossScreen(
+                root.regionX + root.monitorOffsetX,
+                root.regionY + root.monitorOffsetY,
+                root.regionWidth,
+                root.regionHeight,
+                act
+            );
+            root.dismiss();
+            return;
         }
 
         // Clamp region to screen bounds
@@ -334,6 +377,7 @@ PanelWindow {
             root.draggingY = mouse.y;
             root.dragging = true;
             root.mouseButton = mouse.button;
+            if (root.selector) root.selector.liveActive = false;
         }
         onReleased: (mouse) => {
             // Detect if it was a click -> Try to select targeted region
@@ -355,6 +399,7 @@ PanelWindow {
                 root.regionWidth = maxX - minX + padding * 2;
                 root.regionHeight = maxY - minY + padding * 2;
             }
+            if (root.selector) root.selector.liveActive = false;
             root.snip();
         }
         onPositionChanged: (mouse) => {
@@ -365,6 +410,14 @@ PanelWindow {
             root.dragDiffX = mouse.x - root.dragStartX;
             root.dragDiffY = mouse.y - root.dragStartY;
             root.points.push({ x: mouse.x, y: mouse.y });
+            // Publish a global live rectangle so other monitors draw their slice
+            if (root.selector && root.selectionMode === RegionSelection.SelectionMode.RectCorners) {
+                root.selector.liveGX = Math.min(root.dragStartX, root.draggingX) + root.monitorOffsetX;
+                root.selector.liveGY = Math.min(root.dragStartY, root.draggingY) + root.monitorOffsetY;
+                root.selector.liveGW = Math.abs(root.draggingX - root.dragStartX);
+                root.selector.liveGH = Math.abs(root.draggingY - root.dragStartY);
+                root.selector.liveActive = true;
+            }
         }
         
         Loader {
@@ -372,10 +425,11 @@ PanelWindow {
             anchors.fill: parent
             active: root.selectionMode === RegionSelection.SelectionMode.RectCorners
             sourceComponent: RectCornersSelectionDetails {
-                regionX: root.regionX
-                regionY: root.regionY
-                regionWidth: root.regionWidth
-                regionHeight: root.regionHeight
+                regionX: root.drawRegionX
+                regionY: root.drawRegionY
+                regionWidth: root.drawRegionWidth
+                regionHeight: root.drawRegionHeight
+                overlayExtent: root.selector?.overlayExtent ?? Math.max(width, height)
                 mouseX: mouseArea.mouseX
                 mouseY: mouseArea.mouseY
                 color: root.selectionBorderColor
