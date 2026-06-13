@@ -20,7 +20,7 @@ import qs.modules.ii.background.widgets.weather
 
 Variants {
     id: root
-    model: Quickshell.screens
+    model: Quickshell.screens.filter(s => s.name === "DP-1")
 
     PanelWindow {
         id: bgRoot

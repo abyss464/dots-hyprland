@@ -11,8 +11,8 @@ import Quickshell
 Item {
     id: root
     property real padding: 4
-    implicitWidth: QsWindow?.window?.screen.width * 0.7 ?? 0
-    implicitHeight: QsWindow?.window?.screen.height * 0.7 ?? 0
+    implicitWidth: QsWindow?.window?.screen.width * 0.5 ?? 0
+    implicitHeight: QsWindow?.window?.screen.height * 0.5 ?? 0
 
     StyledFlickable {
         id: flickable

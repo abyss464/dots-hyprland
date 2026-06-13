@@ -100,7 +100,7 @@ Scope {
                 }
 
                 GridLayout {
-                    columns: 4
+                    columns: 3
                     columnSpacing: 15
                     rowSpacing: 15
 
@@ -118,7 +118,7 @@ Scope {
                                 sessionRoot.subtitle = buttonText;
                         }
                         KeyNavigation.right: sessionSleep
-                        KeyNavigation.down: sessionHibernate
+                        KeyNavigation.down: sessionShutdown
                     }
                     SessionActionButton {
                         id: sessionSleep
@@ -134,7 +134,7 @@ Scope {
                         }
                         KeyNavigation.left: sessionLock
                         KeyNavigation.right: sessionLogout
-                        KeyNavigation.down: sessionShutdown
+                        KeyNavigation.down: sessionReboot
                     }
                     SessionActionButton {
                         id: sessionLogout
@@ -149,39 +149,7 @@ Scope {
                                 sessionRoot.subtitle = buttonText;
                         }
                         KeyNavigation.left: sessionSleep
-                        KeyNavigation.right: sessionTaskManager
                         KeyNavigation.down: sessionReboot
-                    }
-                    SessionActionButton {
-                        id: sessionTaskManager
-                        buttonIcon: "browse_activity"
-                        buttonText: Translation.tr("Task Manager")
-                        onClicked: {
-                            Session.launchTaskManager();
-                            sessionRoot.hide();
-                        }
-                        onFocusChanged: {
-                            if (focus)
-                                sessionRoot.subtitle = buttonText;
-                        }
-                        KeyNavigation.left: sessionLogout
-                        KeyNavigation.down: sessionFirmwareReboot
-                    }
-
-                    SessionActionButton {
-                        id: sessionHibernate
-                        buttonIcon: "downloading"
-                        buttonText: Translation.tr("Hibernate")
-                        onClicked: {
-                            Session.hibernate();
-                            sessionRoot.hide();
-                        }
-                        onFocusChanged: {
-                            if (focus)
-                                sessionRoot.subtitle = buttonText;
-                        }
-                        KeyNavigation.up: sessionLock
-                        KeyNavigation.right: sessionShutdown
                     }
                     SessionActionButton {
                         id: sessionShutdown
@@ -195,9 +163,8 @@ Scope {
                             if (focus)
                                 sessionRoot.subtitle = buttonText;
                         }
-                        KeyNavigation.left: sessionHibernate
+                        KeyNavigation.up: sessionLock
                         KeyNavigation.right: sessionReboot
-                        KeyNavigation.up: sessionSleep
                     }
                     SessionActionButton {
                         id: sessionReboot
@@ -213,7 +180,7 @@ Scope {
                         }
                         KeyNavigation.left: sessionShutdown
                         KeyNavigation.right: sessionFirmwareReboot
-                        KeyNavigation.up: sessionLogout
+                        KeyNavigation.up: sessionSleep
                     }
                     SessionActionButton {
                         id: sessionFirmwareReboot
@@ -227,7 +194,7 @@ Scope {
                             if (focus)
                                 sessionRoot.subtitle = buttonText;
                         }
-                        KeyNavigation.up: sessionTaskManager
+                        KeyNavigation.up: sessionLogout
                         KeyNavigation.left: sessionReboot
                     }
                 }

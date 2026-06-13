@@ -12,6 +12,8 @@ import Quickshell.Services.UPower
 Rectangle {
     id: root
 
+    signal openBrightnessDialog()
+
     property var screen: root.QsWindow.window?.screen
     property var brightnessMonitor: Brightness.getMonitorForScreen(screen)
 
@@ -39,25 +41,48 @@ Rectangle {
             }
             visible: active
             active: Config.options.sidebar.quickSliders.showBrightness
-            sourceComponent: QuickSlider {
-                materialSymbol: "light_mode"
-                secondaryMaterialSymbol: "wb_twilight"
-                stopIndicatorValues: Hyprsunset.gamma !== 100 && root.brightnessMonitor?.brightness !== 0 ? [0.3 + root.brightnessMonitor?.brightness * 0.7] : []
-                value: Hyprsunset.gamma === 100? 0.3 + root.brightnessMonitor?.brightness * 0.7 : (Hyprsunset.gamma - Hyprsunset.gammaLowerLimit) / (100 - Hyprsunset.gammaLowerLimit) * 0.3
-                tooltipContent: Hyprsunset.gamma === 100 ? `${Math.round(root.brightnessMonitor?.brightness * 100)}%` : `${Translation.tr("Gamma")} ${Hyprsunset.gamma}%`
-                onMoved: {
-                    if (value >= 0.3) {
-                        // 0.3 - 1.0 brightness
-                        root.brightnessMonitor.setBrightness((value - 0.3) / 0.7);
-                        if (Hyprsunset.gamma !== 100) {
-                            Hyprsunset.setGamma(100);
+            sourceComponent: RowLayout {
+                spacing: 4
+                QuickSlider {
+                    Layout.fillWidth: true
+                    materialSymbol: "light_mode"
+                    secondaryMaterialSymbol: "wb_twilight"
+                    stopIndicatorValues: Hyprsunset.gamma !== 100 && root.brightnessMonitor?.brightness !== 0 ? [0.3 + root.brightnessMonitor?.brightness * 0.7] : []
+                    value: Hyprsunset.gamma === 100? 0.3 + root.brightnessMonitor?.brightness * 0.7 : (Hyprsunset.gamma - Hyprsunset.gammaLowerLimit) / (100 - Hyprsunset.gammaLowerLimit) * 0.3
+                    tooltipContent: Hyprsunset.gamma === 100 ? `${Math.round(root.brightnessMonitor?.brightness * 100)}%` : `${Translation.tr("Gamma")} ${Hyprsunset.gamma}%`
+                    onMoved: {
+                        if (value >= 0.3) {
+                            // 0.3 - 1.0 brightness
+                            root.brightnessMonitor.setBrightness((value - 0.3) / 0.7);
+                            if (Hyprsunset.gamma !== 100) {
+                                Hyprsunset.setGamma(100);
+                            }
+                        } else {
+                            // 0 - 0.3 gamma
+                            if (root.brightnessMonitor.brightness !== 0) {
+                                root.brightnessMonitor.setBrightness(0);
+                            }
+                            Hyprsunset.setGamma((value / 0.3 * (100 - Hyprsunset.gammaLowerLimit) + Hyprsunset.gammaLowerLimit));
                         }
-                    } else {
-                        // 0 - 0.3 gamma
-                        if (root.brightnessMonitor.brightness !== 0) {
-                            root.brightnessMonitor.setBrightness(0);
-                        }
-                        Hyprsunset.setGamma((value / 0.3 * (100 - Hyprsunset.gammaLowerLimit) + Hyprsunset.gammaLowerLimit));
+                    }
+                }
+                GroupButton { // Open per-monitor brightness panel
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: Brightness.monitors.length > 1
+                    baseWidth: 34
+                    baseHeight: 34
+                    buttonRadius: Appearance.rounding.full
+                    colBackground: Appearance.colors.colLayer2
+                    onClicked: root.openBrightnessDialog()
+                    contentItem: MaterialSymbol {
+                        anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "open_in_full"
+                        iconSize: 18
+                        color: Appearance.colors.colOnLayer2
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("Per-monitor brightness")
                     }
                 }
             }

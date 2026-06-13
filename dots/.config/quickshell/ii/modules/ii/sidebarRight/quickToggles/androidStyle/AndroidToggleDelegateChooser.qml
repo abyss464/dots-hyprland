@@ -17,6 +17,7 @@ DelegateChooser {
     signal openAudioOutputDialog()
     signal openAudioInputDialog()
     signal openBluetoothDialog()
+    signal openBrightnessDialog()
     signal openNightLightDialog()
     signal openWifiDialog()
 
@@ -67,6 +68,22 @@ DelegateChooser {
         cellSize: modelData.size
         onOpenMenu: {
             root.openBluetoothDialog()
+        }
+    } }
+
+    DelegateChoice { roleValue: "brightness"; AndroidBrightnessToggle {
+        required property int index
+        required property var modelData
+        buttonIndex: root.startingIndex + index
+        buttonData: modelData
+        editMode: root.editMode
+        expandedSize: modelData.size > 1
+        baseCellWidth: root.baseCellWidth
+        baseCellHeight: root.baseCellHeight
+        cellSpacing: root.spacing
+        cellSize: modelData.size
+        onOpenMenu: {
+            root.openBrightnessDialog()
         }
     } }
 

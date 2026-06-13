@@ -19,6 +19,10 @@ Scope { // Scope
             "name": Translation.tr("Keybinds")
         },
         {
+            "icon": "science",
+            "name": Translation.tr("Amino Acids")
+        },
+        {
             "icon": "experiment",
             "name": Translation.tr("Elements")
         },
@@ -171,6 +175,7 @@ Scope { // Scope
                         }
 
                         CheatsheetKeybinds {}
+                        CheatsheetAminoAcids {}
                         CheatsheetPeriodicTable {}
                     }
                 }

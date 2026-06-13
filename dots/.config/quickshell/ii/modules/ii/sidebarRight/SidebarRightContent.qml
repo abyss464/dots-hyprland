@@ -13,6 +13,7 @@ import qs.modules.ii.sidebarRight.quickToggles
 import qs.modules.ii.sidebarRight.quickToggles.classicStyle
 
 import qs.modules.ii.sidebarRight.bluetoothDevices
+import qs.modules.ii.sidebarRight.brightnessMixer
 import qs.modules.ii.sidebarRight.nightLight
 import qs.modules.ii.sidebarRight.volumeMixer
 import qs.modules.ii.sidebarRight.wifiNetworks
@@ -25,6 +26,7 @@ Item {
     property bool showAudioOutputDialog: false
     property bool showAudioInputDialog: false
     property bool showBluetoothDialog: false
+    property bool showBrightnessDialog: false
     property bool showNightLightDialog: false
     property bool showWifiDialog: false
     property bool editMode: false
@@ -37,6 +39,7 @@ Item {
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
                 root.showAudioInputDialog = false;
+                root.showBrightnessDialog = false;
             }
         }
     }
@@ -82,6 +85,12 @@ Item {
                     return true;
                 }
                 sourceComponent: QuickSliders {}
+                Connections {
+                    target: slidersLoader.item
+                    function onOpenBrightnessDialog() {
+                        root.showBrightnessDialog = true;
+                    }
+                }
             }
 
             LoaderedQuickPanelImplementation {
@@ -136,6 +145,11 @@ Item {
                 Bluetooth.defaultAdapter.discovering = true;
             }
         }
+    }
+
+    ToggleDialog {
+        shownPropertyString: "showBrightnessDialog"
+        dialog: BrightnessDialog {}
     }
 
     ToggleDialog {
@@ -197,6 +211,9 @@ Item {
             }
             function onOpenBluetoothDialog() {
                 root.showBluetoothDialog = true;
+            }
+            function onOpenBrightnessDialog() {
+                root.showBrightnessDialog = true;
             }
             function onOpenNightLightDialog() {
                 root.showNightLightDialog = true;
